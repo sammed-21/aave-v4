@@ -154,10 +154,6 @@ abstract contract Base is Test {
   uint256 internal constant MAX_SUPPLY_PRICE = 100;
   uint256 internal constant MIN_DRAWN_INDEX = WadRayMath.RAY;
   uint256 internal constant MAX_DRAWN_INDEX = 100 * WadRayMath.RAY;
-  uint24 internal constant MIN_BORROW_RATE = 0;
-  uint256 internal constant MAX_BORROW_RATE = 1000_00; // matches AssetInterestRateStrategy
-  uint256 internal constant MIN_OPTIMAL_RATIO = 1_00; // 1.00% in BPS, matches AssetInterestRateStrategy
-  uint256 internal constant MAX_OPTIMAL_RATIO = 99_00; // 99.00% in BPS, matches AssetInterestRateStrategy
   uint256 internal constant MAX_SKIP_TIME = 10_000 days;
   uint32 internal constant MIN_LIQUIDATION_BONUS = uint32(PercentageMath.PERCENTAGE_FACTOR); // 100% == 0% bonus
   uint32 internal constant MAX_LIQUIDATION_BONUS = 150_00; // 50% bonus
@@ -602,9 +598,9 @@ abstract contract Base is Test {
     bytes memory encodedIrData = abi.encode(
       IAssetInterestRateStrategy.InterestRateData({
         optimalUsageRatio: 90_00, // 90.00%
-        baseVariableBorrowRate: 5_00, // 5.00%
-        variableRateSlope1: 5_00, // 5.00%
-        variableRateSlope2: 5_00 // 5.00%
+        baseDrawnRate: 5_00, // 5.00%
+        rateGrowthBeforeOptimal: 5_00, // 5.00%
+        rateGrowthAfterOptimal: 5_00 // 5.00%
       })
     );
 
@@ -983,9 +979,9 @@ abstract contract Base is Test {
     bytes memory encodedIrData = abi.encode(
       IAssetInterestRateStrategy.InterestRateData({
         optimalUsageRatio: 90_00, // 90.00%
-        baseVariableBorrowRate: 5_00, // 5.00%
-        variableRateSlope1: 5_00, // 5.00%
-        variableRateSlope2: 5_00 // 5.00%
+        baseDrawnRate: 5_00, // 5.00%
+        rateGrowthBeforeOptimal: 5_00, // 5.00%
+        rateGrowthAfterOptimal: 5_00 // 5.00%
       })
     );
 
@@ -1049,9 +1045,9 @@ abstract contract Base is Test {
     bytes memory encodedIrData = abi.encode(
       IAssetInterestRateStrategy.InterestRateData({
         optimalUsageRatio: 90_00, // 90.00%
-        baseVariableBorrowRate: 5_00, // 5.00%
-        variableRateSlope1: 5_00, // 5.00%
-        variableRateSlope2: 5_00 // 5.00%
+        baseDrawnRate: 5_00, // 5.00%
+        rateGrowthBeforeOptimal: 5_00, // 5.00%
+        rateGrowthAfterOptimal: 5_00 // 5.00%
       })
     );
 
@@ -2220,30 +2216,30 @@ abstract contract Base is Test {
   /// @dev Calculate expected debt index based on input params
   function _calculateExpectedDrawnIndex(
     uint256 initialDrawnIndex,
-    uint96 borrowRate,
+    uint96 drawnRate,
     uint40 startTime
   ) internal view returns (uint256) {
-    return initialDrawnIndex.rayMulUp(MathUtils.calculateLinearInterest(borrowRate, startTime));
+    return initialDrawnIndex.rayMulUp(MathUtils.calculateLinearInterest(drawnRate, startTime));
   }
 
   /// @dev Calculate expected debt index and drawn debt based on input params
   function calculateExpectedDebt(
     uint256 initialDrawnShares,
     uint256 initialDrawnIndex,
-    uint96 borrowRate,
+    uint96 drawnRate,
     uint40 startTime
   ) internal view returns (uint256 newDrawnIndex, uint256 newDrawnDebt) {
-    newDrawnIndex = _calculateExpectedDrawnIndex(initialDrawnIndex, borrowRate, startTime);
+    newDrawnIndex = _calculateExpectedDrawnIndex(initialDrawnIndex, drawnRate, startTime);
     newDrawnDebt = initialDrawnShares.rayMulUp(newDrawnIndex);
   }
 
-  /// @dev Calculate expected drawn debt based on specified borrow rate
+  /// @dev Calculate expected drawn debt based on specified drawn rate
   function _calculateExpectedDrawnDebt(
     uint256 initialDebt,
-    uint96 borrowRate,
+    uint96 drawnRate,
     uint40 startTime
   ) internal view returns (uint256) {
-    return MathUtils.calculateLinearInterest(borrowRate, startTime).rayMulUp(initialDebt);
+    return MathUtils.calculateLinearInterest(drawnRate, startTime).rayMulUp(initialDebt);
   }
 
   /// @dev Calculate expected premium debt based on change in drawn debt and user rp
@@ -2448,20 +2444,20 @@ abstract contract Base is Test {
     return maxCollateralRisk;
   }
 
-  function _spokeMaxBorrowRate(ISpoke spoke) internal view returns (uint32) {
-    uint32 maxBorrowRate;
+  function _spokeMaxDrawnRate(ISpoke spoke) internal view returns (uint32) {
+    uint32 maxDrawnRate;
     for (uint256 reserveId; reserveId < spoke.getReserveCount(); ++reserveId) {
-      uint32 borrowRate = (
+      uint32 drawnRate = (
         _hub(spoke, reserveId).getAssetDrawnRate(_reserveAssetId(spoke, reserveId)).mulDivUp(
           PercentageMath.PERCENTAGE_FACTOR,
           WadRayMath.RAY
         )
       ).toUint32();
-      if (borrowRate > maxBorrowRate) {
-        maxBorrowRate = borrowRate;
+      if (drawnRate > maxDrawnRate) {
+        maxDrawnRate = drawnRate;
       }
     }
-    return maxBorrowRate;
+    return maxDrawnRate;
   }
 
   function _underlying(ISpoke spoke, uint256 reserveId) internal view returns (TestnetERC20) {
@@ -2639,9 +2635,9 @@ abstract contract Base is Test {
     IAssetInterestRateStrategy.InterestRateData memory b
   ) internal pure {
     assertEq(a.optimalUsageRatio, b.optimalUsageRatio, 'optimalUsageRatio');
-    assertEq(a.baseVariableBorrowRate, b.baseVariableBorrowRate, 'baseVariableBorrowRate');
-    assertEq(a.variableRateSlope1, b.variableRateSlope1, 'variableRateSlope1');
-    assertEq(a.variableRateSlope2, b.variableRateSlope2, 'variableRateSlope2');
+    assertEq(a.baseDrawnRate, b.baseDrawnRate, 'baseDrawnRate');
+    assertEq(a.rateGrowthBeforeOptimal, b.rateGrowthBeforeOptimal, 'rateGrowthBeforeOptimal');
+    assertEq(a.rateGrowthAfterOptimal, b.rateGrowthAfterOptimal, 'rateGrowthAfterOptimal');
     assertEq(abi.encode(a), abi.encode(b));
   }
 
@@ -2776,55 +2772,47 @@ abstract contract Base is Test {
     assertEq(hub.getAddedShares(assetId), addedShares, '_mockSupplySharePrice: addedShares');
   }
 
-  function _setConstantInterestRateBps(IHub hub, uint256 assetId, uint32 interestRateBps) internal {
+  function _setConstantDrawnRateBps(IHub hub, uint256 assetId, uint32 drawnRateBps) internal {
     vm.prank(HUB_ADMIN);
     hub.setInterestRateData(
       assetId,
       abi.encode(
         IAssetInterestRateStrategy.InterestRateData({
           optimalUsageRatio: 90_00,
-          baseVariableBorrowRate: interestRateBps,
-          variableRateSlope1: 0,
-          variableRateSlope2: 0
+          baseDrawnRate: drawnRateBps,
+          rateGrowthBeforeOptimal: 0,
+          rateGrowthAfterOptimal: 0
         })
       )
     );
   }
 
-  function _mockInterestRateBps(uint256 interestRateBps) internal {
-    _mockInterestRateBps(address(irStrategy), interestRateBps);
+  function _mockDrawnRateBps(uint256 drawnRateBps) internal {
+    _mockDrawnRateBps(address(irStrategy), drawnRateBps);
   }
 
-  function _mockInterestRateBps(address interestRateStrategy, uint256 interestRateBps) internal {
+  function _mockDrawnRateBps(address irStrategy, uint256 drawnRateBps) internal {
     vm.mockCall(
-      interestRateStrategy,
+      irStrategy,
       IBasicInterestRateStrategy.calculateInterestRate.selector,
-      abi.encode(interestRateBps.bpsToRay())
+      abi.encode(drawnRateBps.bpsToRay())
     );
   }
 
-  function _mockInterestRateBps(
-    uint256 interestRateBps,
+  function _mockDrawnRateBps(
+    uint256 drawnRateBps,
     uint256 assetId,
     uint256 liquidity,
     uint256 drawn,
     uint256 deficit,
     uint256 swept
   ) internal {
-    _mockInterestRateBps(
-      address(irStrategy),
-      interestRateBps,
-      assetId,
-      liquidity,
-      drawn,
-      deficit,
-      swept
-    );
+    _mockDrawnRateBps(address(irStrategy), drawnRateBps, assetId, liquidity, drawn, deficit, swept);
   }
 
-  function _mockInterestRateBps(
-    address interestRateStrategy,
-    uint256 interestRateBps,
+  function _mockDrawnRateBps(
+    address irStrategy,
+    uint256 drawnRateBps,
     uint256 assetId,
     uint256 liquidity,
     uint256 drawn,
@@ -2832,39 +2820,39 @@ abstract contract Base is Test {
     uint256 swept
   ) internal {
     vm.mockCall(
-      interestRateStrategy,
+      irStrategy,
       abi.encodeCall(
         IBasicInterestRateStrategy.calculateInterestRate,
         (assetId, liquidity, drawn, deficit, swept)
       ),
-      abi.encode(interestRateBps.bpsToRay())
+      abi.encode(drawnRateBps.bpsToRay())
     );
   }
 
-  function _mockInterestRateRay(uint256 interestRateRay) internal {
-    _mockInterestRateRay(address(irStrategy), interestRateRay);
+  function _mockDrawnRateRay(uint256 drawnRateRay) internal {
+    _mockDrawnRateRay(address(irStrategy), drawnRateRay);
   }
 
-  function _mockInterestRateRay(address interestRateStrategy, uint256 interestRateRay) internal {
+  function _mockDrawnRateRay(address irStrategy, uint256 drawnRateRay) internal {
     vm.mockCall(
-      interestRateStrategy,
+      irStrategy,
       IBasicInterestRateStrategy.calculateInterestRate.selector,
-      abi.encode(interestRateRay)
+      abi.encode(drawnRateRay)
     );
   }
 
-  function _mockInterestRateRay(
-    uint256 interestRateRay,
+  function _mockDrawnRateRay(
+    uint256 drawnRateRay,
     uint256 assetId,
     uint256 liquidity,
     uint256 drawn
   ) internal {
-    _mockInterestRateRay(address(irStrategy), interestRateRay, assetId, liquidity, drawn, 0, 0);
+    _mockDrawnRateRay(address(irStrategy), drawnRateRay, assetId, liquidity, drawn, 0, 0);
   }
 
-  function _mockInterestRateRay(
-    address interestRateStrategy,
-    uint256 interestRateRay,
+  function _mockDrawnRateRay(
+    address irStrategy,
+    uint256 drawnRateRay,
     uint256 assetId,
     uint256 liquidity,
     uint256 drawn,
@@ -2872,12 +2860,12 @@ abstract contract Base is Test {
     uint256 swept
   ) internal {
     vm.mockCall(
-      interestRateStrategy,
+      irStrategy,
       abi.encodeCall(
         IBasicInterestRateStrategy.calculateInterestRate,
         (assetId, liquidity, drawn, deficit, swept)
       ),
-      abi.encode(interestRateRay)
+      abi.encode(drawnRateRay)
     );
   }
 
@@ -2904,7 +2892,7 @@ abstract contract Base is Test {
     return address(new MockPriceFeed(oracle.decimals(), 'mock', price));
   }
 
-  function _assertBorrowRateSynced(
+  function _assertDrawnRateSynced(
     IHub targetHub,
     uint256 assetId,
     string memory operation
@@ -2921,7 +2909,7 @@ abstract contract Base is Test {
         asset.deficitRay,
         asset.swept
       ),
-      string.concat('base borrow rate after ', operation)
+      string.concat('base drawn rate after ', operation)
     );
   }
 
@@ -3290,9 +3278,9 @@ abstract contract Base is Test {
       bytes memory encodedIrData = abi.encode(
         IAssetInterestRateStrategy.InterestRateData({
           optimalUsageRatio: 90_00, // 90.00%
-          baseVariableBorrowRate: 5_00, // 5.00%
-          variableRateSlope1: 5_00, // 5.00%
-          variableRateSlope2: 5_00 // 5.00%
+          baseDrawnRate: 5_00, // 5.00%
+          rateGrowthBeforeOptimal: 5_00, // 5.00%
+          rateGrowthAfterOptimal: 5_00 // 5.00%
         })
       );
 
