@@ -31,7 +31,7 @@ contract ConfigPositionManagerBaseTest is SpokeBase {
   function _setGlobalPermissionPermitData(
     address delegatee,
     address delegator,
-    bool permission,
+    bool status,
     uint256 deadline
   ) internal returns (IConfigPositionManager.SetGlobalPermissionPermit memory) {
     return
@@ -39,7 +39,7 @@ contract ConfigPositionManagerBaseTest is SpokeBase {
         spoke: address(spoke1),
         delegator: delegator,
         delegatee: delegatee,
-        permission: permission,
+        status: status,
         nonce: positionManager.nonces(delegator, _randomNonceKey()),
         deadline: deadline
       });
@@ -48,7 +48,7 @@ contract ConfigPositionManagerBaseTest is SpokeBase {
   function _setCanSetUsingAsCollateralPermissionPermitData(
     address delegatee,
     address delegator,
-    bool permission,
+    bool status,
     uint256 deadline
   ) internal returns (IConfigPositionManager.SetCanSetUsingAsCollateralPermissionPermit memory) {
     return
@@ -56,7 +56,7 @@ contract ConfigPositionManagerBaseTest is SpokeBase {
         spoke: address(spoke1),
         delegator: delegator,
         delegatee: delegatee,
-        permission: permission,
+        status: status,
         nonce: positionManager.nonces(delegator, _randomNonceKey()),
         deadline: deadline
       });
@@ -65,7 +65,7 @@ contract ConfigPositionManagerBaseTest is SpokeBase {
   function _setCanUpdateUserRiskPremiumPermissionPermitData(
     address delegatee,
     address delegator,
-    bool permission,
+    bool status,
     uint256 deadline
   ) internal returns (IConfigPositionManager.SetCanUpdateUserRiskPremiumPermissionPermit memory) {
     return
@@ -73,7 +73,7 @@ contract ConfigPositionManagerBaseTest is SpokeBase {
         spoke: address(spoke1),
         delegator: delegator,
         delegatee: delegatee,
-        permission: permission,
+        status: status,
         nonce: positionManager.nonces(delegator, _randomNonceKey()),
         deadline: deadline
       });
@@ -82,7 +82,7 @@ contract ConfigPositionManagerBaseTest is SpokeBase {
   function _setCanUpdateUserDynamicConfigPermissionPermitData(
     address delegatee,
     address delegator,
-    bool permission,
+    bool status,
     uint256 deadline
   ) internal returns (IConfigPositionManager.SetCanUpdateUserDynamicConfigPermissionPermit memory) {
     return
@@ -90,7 +90,7 @@ contract ConfigPositionManagerBaseTest is SpokeBase {
         spoke: address(spoke1),
         delegator: delegator,
         delegatee: delegatee,
-        permission: permission,
+        status: status,
         nonce: positionManager.nonces(delegator, _randomNonceKey()),
         deadline: deadline
       });

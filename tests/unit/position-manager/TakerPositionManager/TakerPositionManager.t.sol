@@ -104,6 +104,15 @@ contract TakerPositionManagerTest is TakerPositionManagerBaseTest {
       bob,
       expectedAllowance
     );
+    vm.expectEmit(address(positionManager));
+    emit ITakerPositionManager.WithdrawOnBehalfOf(
+      address(spoke1),
+      bob,
+      alice,
+      _daiReserveId(spoke1),
+      expectedShares,
+      amount
+    );
     vm.prank(bob);
     (returnValues.shares, returnValues.amount) = positionManager.withdrawOnBehalfOf(
       address(spoke1),
@@ -179,6 +188,15 @@ contract TakerPositionManagerTest is TakerPositionManagerBaseTest {
       bob,
       expectedAllowance
     );
+    vm.expectEmit(address(positionManager));
+    emit ITakerPositionManager.WithdrawOnBehalfOf(
+      address(spoke1),
+      bob,
+      alice,
+      _daiReserveId(spoke1),
+      expectedSupplyShares,
+      supplyAmount
+    );
     vm.prank(bob);
     (returnValues.shares, returnValues.amount) = positionManager.withdrawOnBehalfOf(
       address(spoke1),
@@ -230,6 +248,15 @@ contract TakerPositionManagerTest is TakerPositionManagerBaseTest {
       _daiReserveId(spoke1),
       address(positionManager),
       alice,
+      expectedSupplyShares,
+      supplyAmount
+    );
+    vm.expectEmit(address(positionManager));
+    emit ITakerPositionManager.WithdrawOnBehalfOf(
+      address(spoke1),
+      bob,
+      alice,
+      _daiReserveId(spoke1),
       expectedSupplyShares,
       supplyAmount
     );
@@ -319,6 +346,15 @@ contract TakerPositionManagerTest is TakerPositionManagerBaseTest {
       _daiReserveId(spoke1),
       address(positionManager),
       alice,
+      expectedSupplyShares,
+      expectedWithdrawAmount
+    );
+    vm.expectEmit(address(positionManager));
+    emit ITakerPositionManager.WithdrawOnBehalfOf(
+      address(spoke1),
+      bob,
+      alice,
+      _daiReserveId(spoke1),
       expectedSupplyShares,
       expectedWithdrawAmount
     );
@@ -489,6 +525,15 @@ contract TakerPositionManagerTest is TakerPositionManagerBaseTest {
       expectedBorrowShares,
       borrowAmount
     );
+    vm.expectEmit(address(positionManager));
+    emit ITakerPositionManager.BorrowOnBehalfOf(
+      address(spoke1),
+      bob,
+      alice,
+      _daiReserveId(spoke1),
+      expectedBorrowShares,
+      borrowAmount
+    );
     vm.recordLogs();
     vm.prank(bob);
     (returnValues.shares, returnValues.amount) = positionManager.borrowOnBehalfOf(
@@ -556,6 +601,17 @@ contract TakerPositionManagerTest is TakerPositionManagerBaseTest {
     uint256 userBalanceBefore = tokenList.dai.balanceOf(alice);
     uint256 callerBalanceBefore = tokenList.dai.balanceOf(bob);
 
+    uint256 expectedBorrowShares = hub1.previewDrawByAssets(daiAssetId, borrowAmount);
+
+    vm.expectEmit(address(positionManager));
+    emit ITakerPositionManager.BorrowOnBehalfOf(
+      address(spoke1),
+      bob,
+      alice,
+      _daiReserveId(spoke1),
+      expectedBorrowShares,
+      borrowAmount
+    );
     vm.recordLogs();
     vm.prank(bob);
     (returnValues.shares, returnValues.amount) = positionManager.borrowOnBehalfOf(
@@ -607,6 +663,15 @@ contract TakerPositionManagerTest is TakerPositionManagerBaseTest {
       address(positionManager),
       alice,
       hub1.previewRestoreByAssets(daiAssetId, borrowAmount),
+      borrowAmount
+    );
+    vm.expectEmit(address(positionManager));
+    emit ITakerPositionManager.BorrowOnBehalfOf(
+      address(spoke1),
+      bob,
+      alice,
+      _daiReserveId(spoke1),
+      hub1.previewDrawByAssets(daiAssetId, borrowAmount),
       borrowAmount
     );
     vm.recordLogs();
